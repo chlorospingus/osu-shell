@@ -155,7 +155,7 @@ PanelWindow {
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop {
-                            color: Qt.darker(button.color, 8)
+                            color: Qt.darker(button.color, 16)
                             position: 0
                         }
                         GradientStop {
@@ -205,17 +205,24 @@ PanelWindow {
                         onObjectAdded: (index, obj) => obj.parent = triangles
                     }
                 }
-                MultiEffect {
-                    source: triangles
+                Rectangle {
+                    id: triMask
+                    x: triangles.x
+                    y: triangles.y
+                    width: triangles.width
+                    height: triangles.height
+                    visible: false
+                    layer.enabled: true
+                    radius: root.radius
+                    color: "red"
+                }
+                ShaderEffect {
                     anchors.fill: triangles
-                    maskEnabled: true
-                    maskSource: ShaderEffectSource { sourceItem: Rectangle {
-                        x: triangles.x
-                        y: triangles.y
-                        width: triangles.width
-                        height: triangles.height
-                        radius: root.radius
-                    } }
+                    property var src: triangles
+                    property var mask: triMask
+                    vertexShader: "default.vert.qsb"
+                    fragmentShader: "trifade.frag.qsb"
+
                 }
 
                 Item {
