@@ -3,18 +3,16 @@ import Quickshell
 import Quickshell.Io
 
 ShellRoot {
-    IpcHandler {
-        target: "launcher"
-        function hide() {
-            launcher.hide()
-        }
-        function show() {
-            launcher.show()
-        }
-        function toggle() { launcher.visible ? hide() : show() }
+    id: root
+    readonly property var font: {
+        family: "comfortaa"
     }
-        
-    Osu.Launcher {
-        id: launcher
+    Osu.IpcToggle {
+        target: "launcher"
+        item: Osu.Launcher {}
+    }
+    Osu.IpcToggle {
+        target: "lock"
+        item: Osu.Lock { }
     }
 }

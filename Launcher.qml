@@ -12,12 +12,12 @@ import Quickshell.Widgets
 PanelWindow {
     id: launcher
 
-    function hide() {
+    function close() {
         visible = false 
         list.visible = false
         searchInput.text = ""
     }
-    function show() { 
+    function open() { 
         visible = true 
         list.visible = true
         list.modelChanged()
@@ -31,10 +31,9 @@ PanelWindow {
         top: true
         bottom: true
     }
+    visible: false
+
     readonly property int radius: 20
-    readonly property var font: {
-        family: "comfortaa"
-    }
     readonly property int entry_height: 100
     property var currentApps: {
         let apps = Array.from(DesktopEntries.applications.values);
@@ -98,7 +97,7 @@ PanelWindow {
                 function execute() {
                     modelData.execute() 
                     launcher.lastLaunched = modelData.id
-                    launcher.hide()
+                    launcher.close()
                 }
                 Behavior on selectedOffset {
                     NumberAnimation {duration: 500; easing.type: Easing.OutQuint}
@@ -168,7 +167,7 @@ PanelWindow {
                         delegate: Shape {
                             id: tri
                             property real x_size: Math.random() * button.width/12 + button.width/10
-                            property real y_size: x_size * Math.SQRT1_2
+                            property real y_size: x_size * 0.8
 
                             property real y_anim: 0
                             property real y_off: Math.random() * entry_height
@@ -205,12 +204,12 @@ PanelWindow {
                     visible: false
                     layer.enabled: true
                     radius: launcher.radius
-                    color: "red"
                 }
                 ShaderEffect {
                     anchors.fill: triangles
                     property var src: triangles
                     property var mask: triMask
+                    property bool fadeDirection: false
                     vertexShader: "default.vert.qsb"
                     fragmentShader: "trifade.frag.qsb"
 
@@ -242,7 +241,7 @@ PanelWindow {
                     spacing: 4
                     Text {
                         text: modelData.name
-                        font.family: launcher.font
+                        font.family: root.font
                         font.pixelSize: 16
                         font.bold: true
                         color: "white"
@@ -251,7 +250,7 @@ PanelWindow {
                         visible: modelData.comment.length > 0
                         width: parent.parent.width - icon.anchors.rightMargin-icon.width - 20
                         text: modelData.comment
-                        font.family: launcher.font
+                        font.family: root.font
                         color: "white"
                         elide: Text.ElideRight
                     }
@@ -282,7 +281,7 @@ PanelWindow {
             TextInput {
                 z: 5
                 id: searchInput
-                font.family: launcher.font
+                font.family: root.font
                 font.pixelSize: 16
                 font.bold: true
                 focus: true
