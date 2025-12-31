@@ -4,28 +4,48 @@ import QtQuick.Effects
 import QtQuick.Shapes
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Services.Pam
 
 WlSessionLock {
     id: lock
     readonly property string bgPath: "assets/lockbg.jpg"
     readonly property string logoPath: "assets/logo.svg"
+
     function open() {
         locked = true
     }
     function close() {
-        locked = false
+        exitAnimation.start()
     }
     locked: false
+
+    component OutQuint300: Behavior {
+        enabled: lock.secure
+        PropertyAnimation {
+            duration: 500
+            easing.type: Easing.OutQuint
+        }
+    }
+    component Shear5: Shear {
+        required property real height
+        xFactor: height * Math.tan(5 * Math.PI/180) / -100
+    }
+
     surface: WlSessionLockSurface {
         id: surface
         color: "transparent"
         Item {
             id: content
-            visible: true
-            layer.enabled: true
             anchors.fill: parent
+            layer.enabled: true
+            property bool idle: !passInput.text.length
+            Keys.onReturnPressed: {
+                idle = false
+                if (!pam.active) {
+                    pam.start()
+                }
+            }
             Image {
-                visible: false
                 source: lock.bgPath
                 anchors {
                     verticalCenter: parent.verticalCenter
@@ -35,16 +55,136 @@ WlSessionLock {
                 height: surface.height
                 fillMode: Image.PreserveAspectCrop
             }
+
+            Item {
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    verticalCenter: parent.verticalCenter
+                }
+                height: logo.height * 0.3
+                Rectangle {
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    height: parent.height * !content.idle
+                    opacity: !content.idle
+                    OutQuint300 on height {}
+                    OutQuint300 on opacity {}
+                    color: "#323232"
+                    RectangularShadow {
+                        anchors {
+                            fill: parent
+                            leftMargin: -blur
+                            rightMargin: -blur
+                        }
+                        z: -1
+                        blur: 12
+                        opacity: 0.6
+                    }
+                }
+                Item { 
+                    anchors.fill: parent
+                    clip: true
+                    RectangularShadow {
+                        anchors {
+                            top: inputBox.top
+                            right: inputBox.right
+                            bottom: inputBox.bottom
+                            topMargin: -blur
+                            bottomMargin: -blur
+                        }
+                        blur: 16
+                        width: blur
+                        opacity: 0.8
+                        transform: Shear5 {height: inputBox.height}
+                    }
+                    Rectangle {
+                        id: inputBox
+                        anchors {
+                            top: parent.top
+                            bottom: parent.bottom
+                        }
+                        antialiasing: true
+                        x: surface.width/3 + (surface.width/4) * content.idle
+                        width: (surface.width/3 + shear.xFactor) * !content.idle
+                        OutQuint300 on x {}
+                        OutQuint300 on width {}
+                        color: "#5F46BB"
+                        transform: Shear5 {height: inputBox.height; id: shear}
+                    }
+                    Column {
+                        anchors {
+                            verticalCenter: inputBox.verticalCenter
+                            left: inputBox.right
+                            leftMargin: surface.width/3 * -1 + logo.width * 0.29
+                        }
+                        width: inputBox.width
+                        clip: true
+                        spacing: 10
+                        Text {
+                            id: prompt
+                            anchors.left: parent.left
+                            anchors.leftMargin: passInputBg.height * 0.15/2
+                            text: "o shit waddup!"
+                            color: "white"
+                            font {
+                                family: "comfortaa"
+                                pixelSize: 20
+                            }
+                        }
+                        Rectangle {
+                            id: passInputBg
+                            anchors.left: parent.left
+                            anchors.leftMargin: height * 0.15
+                            radius: 12
+                            color: Qt.darker(inputBox.color, 1.5)
+                            height: prompt.font.pixelSize + 20
+                            width: surface.width * 0.18
+                            transform: Shear { xFactor: -0.15 }
+                            TextInput {
+                                id: passInput
+                                anchors.fill: passInputBg
+                                anchors.margins: 10
+                                focus: !pam.active
+                                font: prompt.font
+                                color: "white"
+                                echoMode: TextInput.Password
+                                transform: Shear { xFactor: 0.15 }
+                                onTextChanged: content.idle = !text.length
+                            }
+                        }
+                    }
+                }
+            }
+
             Item {
                 id: logo
                 anchors {
                     verticalCenter: parent.verticalCenter
                     horizontalCenter: parent.horizontalCenter
                 }
-                width: Math.min(surface.width, surface.height) * 0.6 + borderWidth*2
+                width: Math.min(surface.width, surface.height) * 0.6 
                 height: width
+                layer.enabled: true
+                layer.smooth: true
 
-                readonly property real borderWidth: 24
+                readonly property real borderWidth: width * 0.04
+
+                transform: [
+                    Scale {
+                        origin {x: logo.width/2; y: logo.height/2 }
+                        xScale: (content.idle ? 1.0 : 0.5) * (1 + circleHover.hovered * 0.1)
+                        yScale: xScale
+                        OutQuint300 on xScale {}
+                    },
+                    Translate {
+                        x: content.idle ? 0 : (surface.width/6 * -1)
+                        OutQuint300 on x {}
+                    }
+                ]
 
                 // Background
                 Shape {
@@ -64,16 +204,19 @@ WlSessionLock {
                             moveToStart: true
                             centerX: logo.width/2
                             centerY: logo.height/2
-                            radiusX: surface.height * 0.3 + logo.borderWidth/2
+                            radiusX: logo.width * 0.45 + logo.borderWidth/2
                             radiusY: radiusX
                             startAngle: 0
                             sweepAngle: 360
                         }
                     }
+                    HoverHandler { id: circleHover }
+                    TapHandler {
+                        onTapped: content.idle = !content.idle
+                    }
                 }
                 Item {
                     id: triangles
-                    visible: false
                     anchors.fill: parent
                     clip: true
                     layer.enabled: true
@@ -109,14 +252,13 @@ WlSessionLock {
                         }
                         onObjectAdded: (index, obj) => obj.parent = triangles
                     }
-                }
-                ShaderEffect {
-                    anchors.fill: parent
-                    property var src: triangles
-                    property var mask: circleBg
-                    property bool fadeDirection: true
-                    vertexShader: "default.vert.qsb"
-                    fragmentShader: "trifade.frag.qsb"
+                    layer.effect: ShaderEffect {
+                        property var src: triangles
+                        property var mask: circleBg
+                        property bool fadeDirection: true
+                        vertexShader: "default.vert.qsb"
+                        fragmentShader: "trifade.frag.qsb"
+                    }
                 }
 
                 // Group border and logo to shadow together
@@ -135,7 +277,7 @@ WlSessionLock {
                                 moveToStart: true
                                 centerX: logo.width/2
                                 centerY: logo.height/2
-                                radiusX: surface.height * 0.3
+                                radiusX: logo.height * 0.45
                                 radiusY: radiusX
                                 startAngle: 0
                                 sweepAngle: 360
@@ -147,7 +289,7 @@ WlSessionLock {
                         anchors {
                             verticalCenter: parent.verticalCenter
                             horizontalCenter: parent.horizontalCenter
-                            verticalCenterOffset: logo.height * 0.05 * -1
+                            verticalCenterOffset: logo.height * 0.065 * -1
                         }
                         width: logo.width * 0.65
                         height: width
@@ -158,7 +300,6 @@ WlSessionLock {
                         }
                     }
                     layer.effect: MultiEffect {
-                        anchors.fill: parent
                         blurMax: 48
                         shadowEnabled: true
                         shadowOpacity: 0.4
@@ -172,19 +313,13 @@ WlSessionLock {
                 color: "white"
                 anchors.fill: parent
                 PropertyAnimation on opacity {
-                    running: lock.secure
                     from: 1
-
                     to: 0
+                    easing.type: Easing.Linear
                     duration: 800
                 }
             }
-            Button {
-                text: "unlock"
-                onClicked: lock.locked = false
-            }
             layer.effect: MultiEffect {
-                anchors.fill: parent
                 maskEnabled: true
                 maskSource: contentMask
             }
@@ -208,7 +343,24 @@ WlSessionLock {
                     duration: 800
                     easing.type: Easing.OutQuint
                 }
+                PropertyAnimation on progress {
+                    id: exitAnimation
+                    running: false
+                    from: 1
+                    to: 0
+                    easing.type: Easing.OutQuint
+                    onStopped: lock.locked = false
+                }
             }
+        }
+        PamContext {
+            id: pam
+            config: "system-auth"
+            onPamMessage: if (this.responseRequired) this.respond(passInput.text)
+            onCompleted: result => { switch (result) {
+                case PamResult.Success:
+                    exitAnimation.start()
+            }}
         }
     }
 }

@@ -20,7 +20,6 @@ PanelWindow {
     function open() { 
         visible = true 
         list.visible = true
-        list.modelChanged()
     }
 
     implicitWidth: 800
@@ -67,7 +66,6 @@ PanelWindow {
             }
         }
 
-        // TODO: Swap ListView for ScriptModel
         ListView {
             id: list
             spacing: 6
@@ -76,14 +74,8 @@ PanelWindow {
             highlightRangeMode: ListView.StrictlyEnforceRange
             preferredHighlightBegin: 120
             preferredHighlightEnd: this.height/2
-            onModelChanged: {
-                if (searchInput.text === "")
-                    currentIndex = currentApps.findIndex(entry =>
-                        entry.id === lastLaunched
-                    );
-            }
 
-            model: currentApps
+            model: ScriptModel { values: currentApps; objectProp: "id" }
             delegate: Button {
                 height: entry_height
                 width: launcher.width + 10
