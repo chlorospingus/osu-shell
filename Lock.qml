@@ -26,10 +26,6 @@ WlSessionLock {
             easing.type: Easing.OutQuint
         }
     }
-    component Shear5: Shear {
-        required property real height
-        xFactor: height * Math.tan(5 * Math.PI/180) / -100
-    }
 
     surface: WlSessionLockSurface {
         id: surface
@@ -38,7 +34,8 @@ WlSessionLock {
             id: content
             anchors.fill: parent
             layer.enabled: true
-            property bool idle: !passInput.text.length
+            readonly property real angle: -1 * Math.tan(10 * Math.PI/180) // 10 degrees
+            property bool idle: true
             Keys.onReturnPressed: {
                 idle = false
                 if (!pam.active) {
@@ -54,6 +51,13 @@ WlSessionLock {
                 width: surface.width
                 height: surface.height
                 fillMode: Image.PreserveAspectCrop
+                PropertyAnimation on opacity {
+                    running: exitAnimation.running
+                    from: 1
+                    to: 0
+                    duration: 800
+                    easing.type: Easing.Linear
+                }
             }
 
             Item {
@@ -88,6 +92,63 @@ WlSessionLock {
                 Item { 
                     anchors.fill: parent
                     clip: true
+                    Rectangle {
+                        antialiasing: true
+                        anchors {
+                            top: inputBox.top
+                            left: inputBox.right
+                            bottom: inputBox.bottom
+                        }
+                        width: !content.idle * surface.width * 0.05
+                        color: "#EEAA00"
+                        transform: Shear { xFactor: content.angle }
+                        ColorAnimation on color {
+                            onStarted: lockIcon.source = "assets/unlocked.svg"
+                            running: exitAnimation.running
+                            from: Qt.lighter("#A5CE00", 2.5)
+                            to: "#A5CE00"
+                            duration: 400
+                        }
+                        SequentialAnimation on color {
+                            id: failAnimation
+                            running: false
+                            ColorAnimation {
+                                from: Qt.lighter("#CC3378", 2.5)
+                                to: "#CC3378"
+                                duration: 400
+                            }
+                            ColorAnimation { duration: 1500 }
+                            ColorAnimation {
+                                to: "#EEAA00"
+                                duration: 600
+                                easing.type: Easing.InOutQuint
+                            }
+                        }
+                        Image {
+                            id: lockIcon
+                            anchors {
+                                verticalCenter: parent.verticalCenter
+                                horizontalCenter: parent.horizontalCenter
+                                horizontalCenterOffset: content.angle * height * 0.5
+                            }
+                            width: parent.width/2
+                            height: parent.width/2
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                blurMax: 4
+                                shadowEnabled: true
+                                shadowOpacity: 0.4
+                                shadowVerticalOffset: height * 0.04
+                            }
+                            source: "assets/locked.svg"
+                            fillMode: Image.Pad
+                            sourceSize {
+                                width: width
+                                height: height
+                            }
+                            transform: Shear { xFactor: content.angle * -1 }
+                        }
+                    }
                     RectangularShadow {
                         anchors {
                             top: inputBox.top
@@ -99,7 +160,7 @@ WlSessionLock {
                         blur: 16
                         width: blur
                         opacity: 0.8
-                        transform: Shear5 {height: inputBox.height}
+                        transform: Shear { xFactor: content.angle }
                     }
                     Rectangle {
                         id: inputBox
@@ -109,15 +170,16 @@ WlSessionLock {
                         }
                         antialiasing: true
                         x: surface.width/3 + (surface.width/4) * content.idle
-                        width: (surface.width/3 + shear.xFactor) * !content.idle
+                        width: (surface.width/3) * !content.idle
                         OutQuint300 on x {}
                         OutQuint300 on width {}
                         color: "#5F46BB"
-                        transform: Shear5 {height: inputBox.height; id: shear}
+                        transform: Shear { xFactor: content.angle }
                     }
                     Column {
                         anchors {
                             verticalCenter: inputBox.verticalCenter
+                            verticalCenterOffset: pamMessage.height * 1/3
                             left: inputBox.right
                             leftMargin: surface.width/3 * -1 + logo.width * 0.29
                         }
@@ -143,7 +205,7 @@ WlSessionLock {
                             color: Qt.darker(inputBox.color, 1.5)
                             height: prompt.font.pixelSize + 20
                             width: surface.width * 0.18
-                            transform: Shear { xFactor: -0.15 }
+                            transform: Shear { xFactor: content.angle }
                             TextInput {
                                 id: passInput
                                 anchors.fill: passInputBg
@@ -152,8 +214,19 @@ WlSessionLock {
                                 font: prompt.font
                                 color: "white"
                                 echoMode: TextInput.Password
-                                transform: Shear { xFactor: 0.15 }
+                                transform: Shear { xFactor: content.angle * -1 }
                                 onTextChanged: content.idle = !text.length
+                            }
+                        }
+                        Text {
+                            id: pamMessage
+                            text: pam.responseRequired ? "" : pam.message
+                            height: 20
+                            width: 1
+                            color: "white"
+                            font: {
+                                family: prompt.family
+                                pixelSize: 12
                             }
                         }
                     }
@@ -176,7 +249,7 @@ WlSessionLock {
                 transform: [
                     Scale {
                         origin {x: logo.width/2; y: logo.height/2 }
-                        xScale: (content.idle ? 1.0 : 0.5) * (1 + circleHover.hovered * 0.1)
+                        xScale: (content.idle ? 1.0 : 0.5)
                         yScale: xScale
                         OutQuint300 on xScale {}
                     },
@@ -191,7 +264,6 @@ WlSessionLock {
                     id: circleBg
                     layer.enabled: true
                     anchors.fill: parent
-                    containsMode: Shape.FillContains
                     preferredRendererType: Shape.CurveRenderer
                     ShapePath {
                         fillGradient: LinearGradient {
@@ -209,10 +281,6 @@ WlSessionLock {
                             startAngle: 0
                             sweepAngle: 360
                         }
-                    }
-                    HoverHandler { id: circleHover }
-                    TapHandler {
-                        onTapped: content.idle = !content.idle
                     }
                 }
                 Item {
@@ -232,9 +300,11 @@ WlSessionLock {
                             x: Math.random() * (logo.width + x_size*2) - x_size
                             y: (y_anim + y_off) % (logo.height + y_size) - y_size
                             ShapePath {
-                                strokeWidth: 2
+                                strokeWidth: content.idle ? 2 : 4
                                 strokeColor: "#9A4272"
                                 fillColor: "transparent"
+                                capStyle: ShapePath.FlatCap
+                                joinStyle: ShapePath.MiterJoin
 
                                 startX: tri.x_size/2
                                 startY: 0
@@ -345,21 +415,31 @@ WlSessionLock {
                 }
                 PropertyAnimation on progress {
                     id: exitAnimation
+                    duration: 800
                     running: false
                     from: 1
                     to: 0
-                    easing.type: Easing.OutQuint
+                    easing.type: Easing.OutQuart
                     onStopped: lock.locked = false
                 }
             }
         }
         PamContext {
             id: pam
-            config: "system-auth"
+            config: "pam.conf"
+            configDirectory: "."
             onPamMessage: if (this.responseRequired) this.respond(passInput.text)
             onCompleted: result => { switch (result) {
                 case PamResult.Success:
-                    exitAnimation.start()
+                    exitAnimation.start();
+                    break;
+                case PamResult.Failed:
+                case PamResult.Error:
+                case PamResult.MaxTries:
+                    passInput.text = "";
+                    content.idle = false;
+                    failAnimation.start();
+                    break;
             }}
         }
     }

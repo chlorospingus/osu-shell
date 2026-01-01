@@ -137,7 +137,7 @@ PanelWindow {
                     gradient: Gradient {
                         orientation: Gradient.Horizontal
                         GradientStop {
-                            color: Qt.darker(button.color, 16)
+                            color: Qt.darker(button.color, 12)
                             position: 0
                         }
                         GradientStop {
@@ -167,7 +167,11 @@ PanelWindow {
                             y: (y_anim + y_off) % (entry_height + y_size) - y_size
                             ShapePath {
                                 strokeWidth: 2
-                                strokeColor: Qt.darker(button.color, 2.5)
+                                strokeColor: Qt.hsla(
+                                    button.color.hslHue,
+                                    button.color.hslSaturation,
+                                    0.3, 1
+                                )
                                 fillColor: "transparent"
 
                                 startX: tri.x_size/2
