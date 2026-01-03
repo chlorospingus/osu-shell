@@ -19,7 +19,7 @@ WlSessionLock {
     }
     locked: false
 
-    component OutQuint300: Behavior {
+    component OutQuint500: Behavior {
         enabled: lock.secure
         PropertyAnimation {
             duration: 500
@@ -67,6 +67,7 @@ WlSessionLock {
                     verticalCenter: parent.verticalCenter
                 }
                 height: logo.height * 0.3
+
                 Rectangle {
                     anchors {
                         left: parent.left
@@ -75,8 +76,8 @@ WlSessionLock {
                     }
                     height: parent.height * !content.idle
                     opacity: !content.idle
-                    OutQuint300 on height {}
-                    OutQuint300 on opacity {}
+                    OutQuint500 on height {}
+                    OutQuint500 on opacity {}
                     color: "#323232"
                     RectangularShadow {
                         anchors {
@@ -93,13 +94,14 @@ WlSessionLock {
                     anchors.fill: parent
                     clip: true
                     Rectangle {
-                        antialiasing: true
                         anchors {
                             top: inputBox.top
-                            left: inputBox.right
+                            right: inputBox.right
                             bottom: inputBox.bottom
+                            rightMargin: !content.idle * width * -1
                         }
-                        width: !content.idle * surface.width * 0.05
+                        width: surface.width * 0.05
+                        antialiasing: true
                         color: "#EEAA00"
                         transform: Shear { xFactor: content.angle }
                         ColorAnimation on color {
@@ -124,6 +126,7 @@ WlSessionLock {
                                 easing.type: Easing.InOutQuint
                             }
                         }
+                        OutQuint500 on anchors.rightMargin {}
                         Image {
                             id: lockIcon
                             anchors {
@@ -148,19 +151,20 @@ WlSessionLock {
                             }
                             transform: Shear { xFactor: content.angle * -1 }
                         }
-                    }
-                    RectangularShadow {
-                        anchors {
-                            top: inputBox.top
-                            right: inputBox.right
-                            bottom: inputBox.bottom
-                            topMargin: -blur
-                            bottomMargin: -blur
+                        RectangularShadow {
+                            z: -1
+                            anchors {
+                                top: parent.top
+                                bottom: parent.bottom
+                                topMargin: -blur
+                                bottomMargin: -blur
+                                horizontalCenter: parent.right
+                                horizontalCenterOffset: -blur/3
+                            }
+                            blur: 16
+                            width: blur
+                            opacity: 0.4
                         }
-                        blur: 16
-                        width: blur
-                        opacity: 0.8
-                        transform: Shear { xFactor: content.angle }
                     }
                     Rectangle {
                         id: inputBox
@@ -171,10 +175,24 @@ WlSessionLock {
                         antialiasing: true
                         x: surface.width/3 + (surface.width/4) * content.idle
                         width: (surface.width/3) * !content.idle
-                        OutQuint300 on x {}
-                        OutQuint300 on width {}
+                        OutQuint500 on x {}
+                        OutQuint500 on width {}
                         color: "#5F46BB"
                         transform: Shear { xFactor: content.angle }
+                        RectangularShadow {
+                            z: -1
+                            anchors {
+                                top: parent.top
+                                bottom: parent.bottom
+                                topMargin: -blur
+                                bottomMargin: -blur
+                                horizontalCenter: parent.right
+                                horizontalCenterOffset: -blur/3
+                            }
+                            blur: 12
+                            width: blur
+                            opacity: 0.8
+                        }
                     }
                     Column {
                         anchors {
@@ -184,7 +202,6 @@ WlSessionLock {
                             leftMargin: surface.width/3 * -1 + logo.width * 0.29
                         }
                         width: inputBox.width
-                        clip: true
                         spacing: 10
                         Text {
                             id: prompt
@@ -251,11 +268,11 @@ WlSessionLock {
                         origin {x: logo.width/2; y: logo.height/2 }
                         xScale: (content.idle ? 1.0 : 0.5)
                         yScale: xScale
-                        OutQuint300 on xScale {}
+                        OutQuint500 on xScale {}
                     },
                     Translate {
                         x: content.idle ? 0 : (surface.width/6 * -1)
-                        OutQuint300 on x {}
+                        OutQuint500 on x {}
                     }
                 ]
 
@@ -265,6 +282,7 @@ WlSessionLock {
                     layer.enabled: true
                     anchors.fill: parent
                     preferredRendererType: Shape.CurveRenderer
+                    containsMode: Shape.FillContains
                     ShapePath {
                         fillGradient: LinearGradient {
                             orientation: Gradient.Vertical
@@ -282,6 +300,7 @@ WlSessionLock {
                             sweepAngle: 360
                         }
                     }
+                    TapHandler { onTapped: content.idle = false }
                 }
                 Item {
                     id: triangles
@@ -436,8 +455,8 @@ WlSessionLock {
                 case PamResult.Failed:
                 case PamResult.Error:
                 case PamResult.MaxTries:
-                    passInput.text = "";
-                    content.idle = false;
+                    passInput.clear()
+                    content.idle = false
                     failAnimation.start();
                     break;
             }}
