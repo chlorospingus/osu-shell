@@ -20,7 +20,6 @@ PanelWindow {
     function open() { 
         visible = true 
         list.visible = true
-        list.currentIndex = currentApps.findIndex(entry => entry.id === lastLaunched)
     }
 
     implicitWidth: 800
@@ -83,10 +82,11 @@ PanelWindow {
                 z: -index
                 height: entry_height
                 width: launcher.width + 10
+                property real entryOffset: 0
                 property var leftMargin: (Math.pow(Math.abs(this.y - list.contentY - launcher.height/2), 1.8) / 1400)
                 anchors {
                     left: parent?.left
-                    leftMargin: leftMargin + selectedOffset
+                    leftMargin: leftMargin + selectedOffset + entryOffset
                 }
                 property real selectedOffset: ListView.isCurrentItem ? 16 : 64
                 function execute() {
@@ -117,7 +117,6 @@ PanelWindow {
                     if (!canvas.available) {
                         return null
                     }
-                    console.log("calculating color for " + modelData.id)
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(button.iconPath, 0, 0, canvas.width, canvas.height)
                     const pixels = ctx.getImageData(0, 0, 100, 100).data;
@@ -296,6 +295,10 @@ PanelWindow {
                 }
                 color: "white"
                 onActiveFocusChanged: focus = true;
+                onTextChanged: {
+                     if (text === "") list.currentIndex = currentApps.findIndex(entry => entry.id === lastLaunched)
+                     else list.currentIndex = 0
+                }
             }
             Rectangle {
                 color: "#333"
@@ -327,11 +330,19 @@ PanelWindow {
                 }
             }
             Text {
+                id: searchPrompt
                 text: "Search apps..."
                 anchors.fill: searchInput
+                anchors.topMargin: shown ? 0 : 10
+                opacity: shown
                 font: searchInput.font
                 color: "#888"
-                visible: searchInput.text.length === 0
+                property bool shown: searchInput.text.length === 0
+                Behavior on opacity {NumberAnimation {duration: 100}}
+                Behavior on anchors.topMargin { NumberAnimation {
+                    duration: 150
+                    easing.type: Easing.OutQuint  
+                }}
             }
             Image {
                 source: Quickshell.iconPath("search")
