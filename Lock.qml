@@ -27,6 +27,13 @@ WlSessionLock {
         }
     }
 
+    component ExitAnimation: NumberAnimation {
+        running: exitAnimation.running
+        to: 0
+        duration: 800
+        easing.type: Easing.InQuint
+    }
+
     surface: WlSessionLockSurface {
         id: surface
         color: "transparent"
@@ -42,8 +49,30 @@ WlSessionLock {
                     pam.start()
                 }
             }
+            Item {
+                id: bgMask
+                anchors.fill: parent
+                layer.enabled: true
+                visible: false
+                Rectangle {
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                    }
+                    height: 0
+                    NumberAnimation on height {
+                        running: lock.secure
+                        to: surface.height
+                        duration: 800
+                        easing.type: Easing.OutQuint
+                    }
+                    ExitAnimation on height {duration: 1000}
+                }
+            }
             Image {
                 source: lock.bgPath
+                layer.enabled: true
                 anchors {
                     verticalCenter: parent.verticalCenter
                     horizontalCenter: parent.horizontalCenter
@@ -51,12 +80,20 @@ WlSessionLock {
                 width: surface.width
                 height: surface.height
                 fillMode: Image.PreserveAspectCrop
-                PropertyAnimation on opacity {
-                    running: exitAnimation.running
-                    from: 1
-                    to: 0
-                    duration: 800
-                    easing.type: Easing.Linear
+                Rectangle {
+                    color: "white"
+                    anchors.fill: parent
+                    PropertyAnimation on opacity {
+                        running: lock.secure
+                        from: 1
+                        to: 0
+                        easing.type: Easing.Linear
+                        duration: 800
+                    }
+                }
+                layer.effect: MultiEffect {
+                    maskEnabled: true
+                    maskSource: bgMask
                 }
             }
 
@@ -88,11 +125,20 @@ WlSessionLock {
                         z: -1
                         blur: 12
                         opacity: 0.6
+                        ExitAnimation on opacity {}
                     }
+                    ExitAnimation on height {}
                 }
                 Item { 
                     anchors.fill: parent
                     clip: true
+                    visible: false
+                    Timer {
+                        running: true
+                        repeat: false
+                        interval: 500
+                        onTriggered: parent.visible = true
+                    }
                     Rectangle {
                         anchors {
                             top: inputBox.top
@@ -177,6 +223,7 @@ WlSessionLock {
                         width: (surface.width/3) * !content.idle
                         OutQuint500 on x {}
                         OutQuint500 on width {}
+                        ExitAnimation on x {to: surface.width/2 * -1}
                         color: "#5F46BB"
                         transform: Shear { xFactor: content.angle }
                         RectangularShadow {
@@ -266,13 +313,25 @@ WlSessionLock {
                 transform: [
                     Scale {
                         origin {x: logo.width/2; y: logo.height/2 }
-                        xScale: (content.idle ? 1.0 : 0.5)
+                        xScale: ((content.idle ? 1.0 : 0.5) + (logoHover.hovered ? 0.05 : 0)) * lock.secure
                         yScale: xScale
                         OutQuint500 on xScale {}
                     },
+                    Scale {
+                        origin {x: logo.width/2; y: logo.height/2 }
+                        yScale: xScale
+                        NumberAnimation on xScale {
+                            running: lock.secure
+                            from: 0
+                            to: 1
+                            duration: 800
+                            easing.type: Easing.OutQuint
+                        }
+                    },
                     Translate {
-                        x: content.idle ? 0 : (surface.width/6 * -1)
+                        x: (content.idle ? 0 : (surface.width/6 * -1))
                         OutQuint500 on x {}
+                        ExitAnimation on x {to: surface.width * -1}
                     }
                 ]
 
@@ -300,7 +359,8 @@ WlSessionLock {
                             sweepAngle: 360
                         }
                     }
-                    TapHandler { onTapped: content.idle = false }
+                    TapHandler { onTapped: content.idle = !content.idle }
+                    HoverHandler { id: logoHover }
                 }
                 Item {
                     id: triangles
@@ -397,52 +457,16 @@ WlSessionLock {
                 }
             }
 
-            Rectangle {
-                id: flash
-                color: "white"
-                anchors.fill: parent
-                PropertyAnimation on opacity {
-                    from: 1
-                    to: 0
-                    easing.type: Easing.Linear
-                    duration: 800
-                }
-            }
-            layer.effect: MultiEffect {
-                maskEnabled: true
-                maskSource: contentMask
-            }
         }
 
-        Item {
-            id: contentMask
-            layer.enabled: true
-            anchors.fill: parent
-            visible: false
-            Rectangle {
-                x: 0
-                y: surface.height/2 * (1 - progress)
-                width: surface.width
-                height: surface.height * progress
-                property real progress: 0
-                PropertyAnimation on progress {
-                    running: lock.secure
-                    from: 0
-                    to: 1
-                    duration: 800
-                    easing.type: Easing.OutQuint
-                }
-                PropertyAnimation on progress {
-                    id: exitAnimation
-                    duration: 800
-                    running: false
-                    from: 1
-                    to: 0
-                    easing.type: Easing.OutQuart
-                    onStopped: lock.locked = false
-                }
-            }
+        Timer {
+            id: exitAnimation
+            running: false
+            repeat: false
+            interval: 1200
+            onTriggered: lock.locked = false
         }
+
         PamContext {
             id: pam
             config: "pam.conf"
@@ -450,7 +474,7 @@ WlSessionLock {
             onPamMessage: if (this.responseRequired) this.respond(passInput.text)
             onCompleted: result => { switch (result) {
                 case PamResult.Success:
-                    exitAnimation.start();
+                    exitAnimation.start()
                     break;
                 case PamResult.Failed:
                 case PamResult.Error:
