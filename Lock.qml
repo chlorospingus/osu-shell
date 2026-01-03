@@ -9,7 +9,7 @@ import Quickshell.Services.Pam
 WlSessionLock {
     id: lock
     readonly property string bgPath: "assets/lockbg.jpg"
-    readonly property string logoPath: "assets/logo.svg"
+    readonly property string logoPath: "assets/hyprland.svg"
 
     function open() {
         locked = true
@@ -438,9 +438,10 @@ WlSessionLock {
                         anchors {
                             verticalCenter: parent.verticalCenter
                             horizontalCenter: parent.horizontalCenter
-                            verticalCenterOffset: logo.height * 0.065 * -1
+                            // verticalCenterOffset: logo.height * 0.065 * -1
+                            verticalCenterOffset: logo.height * 0.015 * -1
                         }
-                        width: logo.width * 0.65
+                        width: logo.width * 0.6
                         height: width
                         source: lock.logoPath
                         sourceSize {
