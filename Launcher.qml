@@ -20,6 +20,7 @@ PanelWindow {
     function open() { 
         visible = true 
         list.visible = true
+        list.currentIndex = currentApps.findIndex(entry => entry.id === lastLaunched)
     }
 
     implicitWidth: 800
@@ -34,8 +35,9 @@ PanelWindow {
 
     readonly property int radius: 20
     readonly property int entry_height: 100
+    property var apps: {Array.from(DesktopEntries.applications.values)}
     property var currentApps: {
-        let apps = Array.from(DesktopEntries.applications.values);
+        let apps = this.apps;
         if (searchInput.text.length === 0) {
             apps.sort((a, b) => a.name.localeCompare(b.name));
             return apps;
@@ -75,8 +77,10 @@ PanelWindow {
             preferredHighlightBegin: 120
             preferredHighlightEnd: this.height/2
 
-            model: ScriptModel { values: currentApps; objectProp: "id" }
+            model: ScriptModel { values: currentApps }
             delegate: Button {
+                id: button
+                z: -index
                 height: entry_height
                 width: launcher.width + 10
                 property var leftMargin: (Math.pow(Math.abs(this.y - list.contentY - launcher.height/2), 1.8) / 1400)
@@ -84,7 +88,6 @@ PanelWindow {
                     left: parent?.left
                     leftMargin: leftMargin + selectedOffset
                 }
-                z: -index
                 property real selectedOffset: ListView.isCurrentItem ? 16 : 64
                 function execute() {
                     modelData.execute() 
@@ -94,7 +97,6 @@ PanelWindow {
                 Behavior on selectedOffset {
                     NumberAnimation {duration: 500; easing.type: Easing.OutQuint}
                 }
-                id: button
                 onClicked: execute()
 
                 // Calculate background color based on average color of icon
@@ -109,9 +111,13 @@ PanelWindow {
                     Component.onCompleted: loadImage(button.iconPath)
                 }
                 property var color: {
+                    if (modelData.color) {
+                        return modelData.color
+                    }
                     if (!canvas.available) {
                         return null
                     }
+                    console.log("calculating color for " + modelData.id)
                     const ctx = canvas.getContext("2d");
                     ctx.drawImage(button.iconPath, 0, 0, canvas.width, canvas.height)
                     const pixels = ctx.getImageData(0, 0, 100, 100).data;
@@ -126,7 +132,9 @@ PanelWindow {
                         avg[2] += pixels[i+2] * saturation;
                         count += pixels[i+3] * saturation;
                     }
-                    return Qt.rgba(avg[0]/count, avg[1]/count, avg[2]/count, 1);
+                    let res = Qt.rgba(avg[0]/count, avg[1]/count, avg[2]/count, 1);
+                    modelData.color = res;
+                    return res;
                 }
                 property var iconPath: Quickshell.iconPath(modelData.icon)
 
@@ -167,11 +175,11 @@ PanelWindow {
                             y: (y_anim + y_off) % (entry_height + y_size) - y_size
                             ShapePath {
                                 strokeWidth: 2
-                                strokeColor: Qt.hsla(
+                                strokeColor: button.color ? Qt.hsla(
                                     button.color.hslHue,
                                     button.color.hslSaturation,
                                     0.3, 1
-                                )
+                                ) : button.color
                                 fillColor: "transparent"
 
                                 startX: tri.x_size/2
