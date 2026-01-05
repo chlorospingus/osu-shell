@@ -177,7 +177,7 @@ PanelWindow {
                                 strokeColor: button.color ? Qt.hsla(
                                     button.color.hslHue,
                                     button.color.hslSaturation,
-                                    0.3, 1
+                                    0.35, 1
                                 ) : button.color
                                 fillColor: "transparent"
 

@@ -80,6 +80,19 @@ WlSessionLock {
                 width: surface.width
                 height: surface.height
                 fillMode: Image.PreserveAspectCrop
+                transform: [
+                    Scale {
+                        origin {x: surface.width/2; y: surface.height/2}
+                        xScale: 1.02
+                        yScale: xScale
+                    }, 
+                    Translate {
+                        x: (surfaceHover.point.position.x - surface.width/2) * 0.02
+                        y: (surfaceHover.point.position.y - surface.height/2) * 0.02
+                        OutQuint500 on x {}
+                        OutQuint500 on y {}
+                    }
+                ]
                 Rectangle {
                     color: "white"
                     anchors.fill: parent
@@ -125,9 +138,9 @@ WlSessionLock {
                         z: -1
                         blur: 12
                         opacity: 0.6
-                        ExitAnimation on opacity {}
+                        ExitAnimation on opacity { duration: 600 }
                     }
-                    ExitAnimation on height {}
+                    ExitAnimation on height { duration: 600 }
                 }
                 Item { 
                     anchors.fill: parent
@@ -458,6 +471,10 @@ WlSessionLock {
                 }
             }
 
+        }
+
+        HoverHandler {
+            id: surfaceHover
         }
 
         Timer {
