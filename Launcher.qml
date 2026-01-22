@@ -21,6 +21,9 @@ PanelWindow {
         visible = true 
         list.visible = true
     }
+    function toggle() {
+        launcher.visible ? close() : open();
+    }
 
     implicitWidth: 800
     exclusiveZone: 0
@@ -63,7 +66,8 @@ PanelWindow {
                     launcher.visible = false
                     break;
                 case Qt.Key_Return:
-                    list.currentItem.execute()
+                    if (list.currentItem) list.currentItem.execute();
+                    break;
             }
         }
 
@@ -148,7 +152,7 @@ PanelWindow {
                             position: 0
                         }
                         GradientStop {
-                            color: Qt.darker(button.color, 4)
+                            color: Qt.darker(button.color, 3)
                             position: 1
                         }
                     }

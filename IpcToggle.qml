@@ -10,6 +10,6 @@ IpcHandler {
         item.open();
     }
     function toggle() {
-        item.visible ? close() : open()
+        item.toggle();
     }
 }
